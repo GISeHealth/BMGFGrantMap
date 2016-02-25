@@ -4,41 +4,36 @@ var scope = '',
     dataLayer = null,
     markerGroup = null,
     stateData = null;
-
-$(document).ready(function(){
-    $('[data-toggle="tooltip"]').tooltip();
-});
-
+/*
 var style = {
-        "clickable": true,
-        "color": '#B81609',
-        "fillColor": '#FFFFFF',
-        "weight": 2.0,
-        "opacity": 0.2,
-        "fillOpacity": 0.1
-    };
-    var hoverStyle = {
-        "fillOpacity": 0.5
-    };
-
+    "clickable": true,
+    "color": '#B81609',
+    "fillColor": '#FFFFFF',
+    "weight": 2.0,
+    "opacity": 0.2,
+    "fillOpacity": 0.1
+};
+var hoverStyle = {
+    "fillOpacity": 0.5
+};
 
 $.ajax({
-  type: "POST",
-  url: "http://ehealthafrica.cartodb.com/api/v2/sql?format=GeoJSON&q=SELECT * FROM nigeria_state_boundary",
-  dataType: 'json',
-  success: function (response) {
-    stateLayer = L.geoJson(response, {
-    style: style
-  }).addTo(map);
-  }
-});
+    type: "POST",
+    url: "http://ehealthafrica.cartodb.com/api/v2/sql?format=GeoJSON&q=SELECT * FROM nigeria_state_boundary",
+    dataType: 'json',
+    success: function (response) {
+        stateLayer = L.geoJson(response, {
+            style: style
+        }).addTo(map);
+    }
+});*/
 
 var map = L.map('map', {
     center: [10, 8],
     zoom: 8,
     zoomControl: false,
     minZoom: 6
-    //layers:[stateLayer]
+        //layers:[stateLayer]
 });
 
 
@@ -50,12 +45,18 @@ map.fitBounds([
 
 L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 18
-  }).addTo(map);
+}).addTo(map);
 
 new L.Control.Zoom({
     position: 'topright'
 }).addTo(map);
 
+L.control.scale({
+    position: 'bottomright',
+    maxWidth: 150,
+    metric: true,
+    updateWhenIdle: true
+}).addTo(map);
 
 
 function triggerUiUpdate() {
@@ -77,12 +78,13 @@ function buildSelectedSectors(sector) {
 }
 
 function toggleClass(id) {
+    console.log("Selected", id)
     if (id != null) {
         if ($('#'.concat(id)).hasClass('btn-primary')) {
             $('#'.concat(id)).removeClass('btn-primary')
-            $('#'.concat(id)).addClass('btn-success')
-        } else if ($('#'.concat(id)).hasClass('btn-success')) {
-            $('#'.concat(id)).removeClass('btn-success')
+            $('#'.concat(id)).addClass('btn-'.concat(id))
+        } else if ($('#'.concat(id)).hasClass('btn-'.concat(id))) {
+            $('#'.concat(id)).removeClass('btn-'.concat(id))
             $('#'.concat(id)).addClass('btn-primary')
         }
     }
@@ -103,7 +105,7 @@ function buildQuery(_scope, _sectors) {
             else query = query.concat(" OR sector='" + _sectors[i] + "'")
         }
     }
-  console.log("Query ", query)
+    //console.log("Query ", query)
     return query;
 }
 
@@ -114,11 +116,11 @@ function addDataToMap(geoData) {
     if (dataLayer != null)
         map.removeLayer(dataLayer)
 
-        if (markerGroup != null)
-          map.removeLayer(markerGroup)
+    if (markerGroup != null)
+        map.removeLayer(markerGroup)
 
 
-    var _radius = 7
+    var _radius = 10
     var _outColor = "#fff"
     var _weight = 1
     var _opacity = 1
@@ -179,22 +181,27 @@ function addDataToMap(geoData) {
     $('#projectCount').text(geoData.features.length)
 
     markerGroup = L.markerClusterGroup({
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
-      removeOutsideVisibleBounds: true
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        removeOutsideVisibleBounds: true
     })
 
     dataLayer = L.geoJson(geoData, {
         pointToLayer: function (feature, latlng) {
             var marker = L.circleMarker(latlng, allColours[feature.properties.sector])
-            //markerGroup.addLayer(marker);
+                //markerGroup.addLayer(marker);
             return marker
         },
         onEachFeature: function (feature, layer) {
             if (feature.properties && feature.properties.cartodb_id) {
-                layer.bindPopup(buildPopupContent(feature));
+                //layer.bindPopup(buildPopupContent(feature));
+                layer.on('click', function () {
+                    displayInfo(feature)
+                })
             }
+
         }
+
     })
 
     markerGroup.addLayer(dataLayer);
@@ -202,6 +209,13 @@ function addDataToMap(geoData) {
     //map.fitBounds(markerGroup.getBounds());
     //dataLayer.addTo(map);
 
+}
+
+function displayInfo(feature) {
+    //console.log('displaying info..')
+    var infoContent = buildPopupContent(feature)
+        //console.log("info", infoContent)
+    $('#infoContent').html(infoContent)
 }
 
 function normalizeName(source) {
@@ -217,10 +231,11 @@ function buildPopupContent(feature) {
     var propertyNames = ['sector', 'state', 'scope_of_work', 'duration', 'bmgf_point', 'grantee_organisation', 'beneficiary', 'title_of_grant', 'nature_of_work', 'focal_state', 'organisation']
     for (var i = 0; i < propertyNames.length; i++) {
         subcontent = subcontent.concat('<p><strong>' + normalizeName(propertyNames[i]) + ': </strong>' + feature.properties[propertyNames[i]] + '</p>')
+
     }
     return subcontent;
-
 }
+
 
 function getData(queryUrl) {
     $('.fa-spinner').addClass('fa-spin')
@@ -230,8 +245,8 @@ function getData(queryUrl) {
         $('.fa-spinner').hide()
         addDataToMap(data)
     }).fail(function () {
-      console.log("error!")
-    }) ;
+        console.log("error!")
+    });
 }
 
 triggerUiUpdate()
